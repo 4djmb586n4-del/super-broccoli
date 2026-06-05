@@ -68,14 +68,32 @@ def fit_arc(path: np.ndarray) -> tuple[tuple[float, float], float, float, float,
     dist = np.sqrt((path[:, 0] - cr) ** 2 + (path[:, 1] - cc) ** 2)
     rms = float(np.sqrt(((dist - r) ** 2).mean()))
 
-    # Angles of start and end path points
-    def angle_deg(pt):
-        return float(np.degrees(np.arctan2(pt[0] - cr, pt[1] - cc)))
-
-    start_angle = angle_deg(path[0])
-    end_angle   = angle_deg(path[-1])
+    # Start angle from the first path point (atan2(row-cr, col-cc) → matches
+    # the col=x, row=y convention used by the SVG builder).
+    start_angle = float(np.degrees(np.arctan2(path[0, 0] - cr, path[0, 1] - cc)))
+    # Signed sweep traversed along the path (sign encodes draw direction).
+    signed_sweep = signed_arc_span(path, (cr, cc))
+    end_angle = start_angle + signed_sweep
 
     return (cr, cc), r, start_angle, end_angle, rms
+
+
+def signed_arc_span(path: np.ndarray, center: tuple[float, float]) -> float:
+    """Signed total angular sweep (degrees) traversed along the path.
+
+    Positive = counter-clockwise in (row, col) space. Sign and magnitude come
+    from summing consecutive angular steps, so an open 46° arc yields ±46°,
+    not 314° — which is what fixes arcs being rendered the long way around.
+    """
+    cr, cc = center
+    vecs = path.astype(np.float64) - np.array([cr, cc])
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    norms = np.where(norms < 1e-9, 1.0, norms)
+    unit = vecs / norms
+    cross = unit[:-1, 0] * unit[1:, 1] - unit[:-1, 1] * unit[1:, 0]
+    dot   = (unit[:-1] * unit[1:]).sum(axis=1)
+    steps = np.arctan2(cross, dot)
+    return float(np.degrees(steps.sum()))
 
 
 def arc_angular_span(path: np.ndarray, center: tuple[float, float]) -> float:

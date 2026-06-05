@@ -15,6 +15,13 @@ def _classify_edge(path: np.ndarray, config: VectorizerConfig) -> Primitive:
     if len(path) < 2:
         return Primitive(kind='line', points=path[:2] if len(path) >= 2 else np.zeros((2, 2), np.float32))
 
+    # ── High-fidelity mode: trace centreline as a dense polyline ──────────────
+    # No circle/arc fitting → never produces catastrophic artefacts (giant
+    # circles), perfectly follows the drawing. Trades clean geometry for fidelity.
+    if config.fidelity_level >= 0.8:
+        simplified = rdp(path, epsilon=config.dp_epsilon * 0.5)
+        return Primitive(kind='polyline', points=simplified.astype(np.float32))
+
     # ── Try line ─────────────────────────────────────────────────────────────
     endpoints, line_rms = fit_line(path)
     if line_rms <= config.line_residual:

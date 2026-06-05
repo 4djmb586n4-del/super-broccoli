@@ -29,13 +29,15 @@ def _arc_path(center: tuple[float, float], radius: float,
     ex = cc + radius * math.cos(end_rad)
     ey = cr + radius * math.sin(end_rad)
 
-    span = (end_deg - start_deg) % 360
-    large_arc = 1 if span > 180 else 0
+    # end_deg = start_deg + signed_sweep, so the signed sweep recovers both flags.
+    sweep_signed = end_deg - start_deg
+    large_arc = 1 if abs(sweep_signed) > 180 else 0
+    sweep_flag = 1 if sweep_signed > 0 else 0
 
     f = lambda v: _fmt(v, decimals)
     return (
         f"M {f(sx)},{f(sy)} "
-        f"A {f(radius)},{f(radius)} 0 {large_arc},1 {f(ex)},{f(ey)}"
+        f"A {f(radius)},{f(radius)} 0 {large_arc},{sweep_flag} {f(ex)},{f(ey)}"
     )
 
 
