@@ -19,7 +19,7 @@ class VectorizerConfig(BaseSettings):
 
     # ── M5 primitive fitting ──────────────────────────────────────────────────
     line_residual: float = 1.5             # max RMS (px) to accept TLS line fit
-    arc_residual: float = 1.5              # max RMS (px) to accept Taubin arc fit
+    arc_residual: float = 3.0              # max RMS (px) to accept Taubin arc fit
     min_arc_radius: float = 3.0            # arcs with r < this are skipped
     max_arc_radius: float = 5000.0         # arcs with r > this treated as lines
     dp_epsilon: float = 1.0               # Douglas-Peucker tolerance (px)

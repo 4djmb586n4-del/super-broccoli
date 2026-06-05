@@ -79,8 +79,23 @@ def fit_arc(path: np.ndarray) -> tuple[tuple[float, float], float, float, float,
 
 
 def arc_angular_span(path: np.ndarray, center: tuple[float, float]) -> float:
-    """Return the total angular span of path points around center (degrees)."""
+    """Return the total angular span of path points around center (degrees).
+
+    Uses cumulative angular step sum instead of unwrap to handle any path ordering.
+    """
     cr, cc = center
-    angles = np.degrees(np.arctan2(path[:, 0] - cr, path[:, 1] - cc))
-    angles = np.unwrap(np.radians(angles))
-    return float(abs(np.degrees(angles[-1] - angles[0])))
+    vecs = path.astype(np.float64) - np.array([cr, cc])
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    norms = np.where(norms < 1e-9, 1.0, norms)
+    unit = vecs / norms
+
+    # Cross and dot between consecutive unit vectors → signed angular steps
+    cross = unit[:-1, 0] * unit[1:, 1] - unit[:-1, 1] * unit[1:, 0]
+    dot   = (unit[:-1] * unit[1:]).sum(axis=1)
+    steps = np.arctan2(cross, dot)
+    return float(abs(np.degrees(steps.sum())))
+
+
+def endpoints_distance(path: np.ndarray) -> float:
+    """Euclidean distance between the first and last path points."""
+    return float(np.linalg.norm(path[-1].astype(np.float64) - path[0].astype(np.float64)))

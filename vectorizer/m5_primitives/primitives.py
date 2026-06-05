@@ -6,7 +6,7 @@ import networkx as nx
 from vectorizer.config import VectorizerConfig
 from vectorizer.types import GraphResult, Primitive, PrimitivesResult
 
-from .arcs import arc_angular_span, fit_arc
+from .arcs import arc_angular_span, endpoints_distance, fit_arc
 from .lines import fit_line
 from .polylines import rdp
 
@@ -29,7 +29,11 @@ def _classify_edge(path: np.ndarray, config: VectorizerConfig) -> Primitive:
                 and config.min_arc_radius <= radius <= config.max_arc_radius
             ):
                 span = arc_angular_span(path, center)
-                if span >= 340:
+                # A closed circle requires the path to actually loop back on itself;
+                # guard against winding open curves being misclassified as circles.
+                endpoint_gap = endpoints_distance(path)
+                is_closed = span >= 340 and endpoint_gap < radius * 0.3
+                if is_closed:
                     return Primitive(
                         kind='circle',
                         points=np.array([list(center)], dtype=np.float32),
